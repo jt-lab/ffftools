@@ -1,0 +1,11 @@
+Column name,Label name,Short name,Data type,Range,Description
+M_Participant_ID,Participant,P,Arbitrary,Arbitrary,An identifier that is unique to this participant within the data set
+M_Condition_Name,Condition,Cond.,String,Arbitrary,"A readable name of the condition (e. g., not just a number)"
+M_Trial_Index,Trial,T,Integer,0 … N,A zero-based index of the trials within the experiment
+M_Trial_Time_in_Patch,Time in Patch,TiP,Float,0 … R,The time spent foraging in the trial. Does not include travel times
+M_Selection_Index,Selection,,Integer,0 … N,A zero-based index of the selections within the trial
+M_Selection_Role,Role,Role,String,"“target”, “distractor”, …",The role of the selected stimulus in the experiment
+M_Selection_Type,Type,Type,String,Arbitrary,"Type, category, or features of the selected stimulus "
+M_Selection_X,X,X,Float,-R … +R,X-location of the selection relative to the patch center (in C_Space_Unit)
+M_Selection_Y,Y,Y,Float,-R … +R,Y-location of the selection relative to the patch center (in C_Space_Unit)
+M_Selection_Time,Selection Time,Time,Float/Integer,0 … R/N,Time stamp of the selection relative to the trial start (in C_Space_Unit)
