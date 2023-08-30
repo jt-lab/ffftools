@@ -11,8 +11,8 @@ def nicify(df):
             if row['Column name'] in df.columns:
                 df.rename(columns={row['Column name']: row['Label name']}, inplace=True)
 
-    mdf = pd.read_csv(join(dirname(__file__), 'columns', 'mandatory.csv').reset_index())
-    cdf = pd.read_csv(join(dirname(__file__), 'columns', 'computable.csv').reset_index())
+    mdf = pd.read_csv(join(dirname(__file__), 'columns', 'mandatory.csv')).reset_index()
+    cdf = pd.read_csv(join(dirname(__file__), 'columns', 'computable.csv')).reset_index()
 
     rename_columns(df, mdf)
     rename_columns(df, cdf)
