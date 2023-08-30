@@ -17,7 +17,7 @@ def nicify(df):
     rename_columns(df, mdf)
     rename_columns(df, cdf)
 
-    df = df.reset_index(drop=True)
+    df = df.reset_index()
     
     return df
 
