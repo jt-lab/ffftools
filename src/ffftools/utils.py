@@ -13,11 +13,10 @@ def nicify(df):
 
     mdf = pd.read_csv(join(dirname(__file__), 'columns', 'mandatory.csv'))
     cdf = pd.read_csv(join(dirname(__file__), 'columns', 'computable.csv'))
-    
-    rename_columns(df, mdf)
-    rename_columns(df, cdf)
 
     df = df.reset_index()
+    rename_columns(df, mdf)
+    rename_columns(df, cdf)
     
     return df
 
