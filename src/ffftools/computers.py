@@ -52,7 +52,7 @@ def compute_Selection_ITT(df):
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     df['C_Selection_Inter-target_Time'] = -1
     itts = dfts['M_Selection_Time'].values[1:] - dfts['M_Selection_Time'].values[0:-1]
-    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Time'] = [-1] + list(itts)
+    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Time'] = np.array([-1] + list(itts), dtype=float)
     df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Time'] = -1
     return(df)
 
