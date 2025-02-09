@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ffftools"
-version = "0.0.1"
+version = "0.0.2"
 description = "Utilities to  work with data files in the Foraging File Format (fff)."
 authors = [
     "Jan Tünnermann <jan.tuennermann@uni-marburg.de>",

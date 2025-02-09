@@ -1,16 +1,28 @@
 import numpy as np
+from scipy.stats import kendalltau
+from tqdm.auto import tqdm
+from .algorithms.sequence import sts
 
 def compute_trialwise(df, fun, colname):
+    #with tqdm(total=len(df)) as pbar:
     for p in df.M_Participant_ID.unique():
         maskp = df.M_Participant_ID == p
         for c in df[maskp].M_Condition_Name.unique():
             maskc = df.M_Condition_Name == c
             for t in df[(maskp & maskc)].M_Trial_Index.unique():
                 maskt = df.M_Trial_Index == t
-                df.loc[(maskp & maskc & maskt), colname] = \
-                    fun(df[(maskp & maskc & maskt)])
+                value = fun(df[(maskp & maskc & maskt)])
+                if not np.isscalar(value) and (len(value) != len(df.loc[(maskp & maskc & maskt)])):
+                    # TODO: Needs fixing!
+                    #df[colname] = df[colname].astype(object) # TODO: only when needed
+                    # Manually broadcast tuples
+                    value = [value] * len(df.loc[(maskp & maskc & maskt)])
+                #print(df.loc[(maskp & maskc & maskt)])
+                df.loc[(maskp & maskc & maskt), colname] = value
+#               pbar.update(1)
 
 def compute_Selection_Target_Count(df):
+    #TODO Spped up!
     def _compute_count(df):
         count = []
         last_t_index = -1
@@ -77,7 +89,7 @@ def compute_Trial_BestR(df):
     compute_trialwise(df, lambda x : _compute_XR_YR(x, 'M_Selection_X'), 'C_Trial_XR')
     compute_trialwise(df, lambda x : _compute_XR_YR(x, 'M_Selection_Y'), 'C_Trial_YR')
     df['C_Trial_BestR'] = df[["C_Trial_XR", "C_Trial_YR"]].abs().max(axis=1)
-    df['C_Trial_Collection_Direction'] = 'None' # Will be overwritten virually always!
+    df['C_Trial_Collection_Direction'] = 'None' # Will be overwritten virtually always!
     df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] < 0),\
         'C_Trial_Collection_Direction'] = 'left to right'
     df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] > 0),\
@@ -86,5 +98,78 @@ def compute_Trial_BestR(df):
         'C_Trial_Collection_Direction'] = 'top to bottom'
     df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] > 0),\
         'C_Trial_Collection_Direction'] = 'bottom to top'
-    
     return(df)
+
+def compute_Trial_Tau(df, reference_order, id='C_Selection_ID', key='M_Condition_Name'):
+    def _compare_lists(df, reference_order, key):
+        if type(reference_order) == dict:
+            subkey = df[key].values[0]
+            if not subkey in reference_order.keys():
+                subkey = 'others'
+            maxTau = 0
+            for sequence in reference_order[subkey]:
+                tau = kendalltau(df[id].values, sequence)[0]
+                if abs(tau) > maxTau:
+                    maxTau = tau
+            return maxTau
+        else:
+            return kendalltau(df[id].values, reference_order)[0]
+    dfts = df.loc[df['M_Selection_Role'] == 'target']
+    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_Tau')
+    dfts['C_Trial_AbsTau'] = dfts['C_Trial_Tau'].abs() 
+    return dfts
+    
+def compute_Trial_BestLev(df, reference_order, id='C_Selection_ID', key='M_Condition_Name', include_reversals=True):
+    print("Best lev started!")
+    from Levenshtein import distance as levenshtein_distance
+    def _normalized_levenshtein(obs, gt):
+        d = levenshtein_distance("".join(map(str, obs)), "".join(map(str, gt)))
+        l = max(len(obs), len(gt))
+        return 1 - d / l
+    def _compare_lists(df, reference_order, key):
+        print("working on one trial!")
+        if type(reference_order) == dict:
+            subkey = df[key].values[0]
+            if not subkey in reference_order.keys():
+                subkey = 'others'
+            bestLev = 0
+            # Add reversals to the list
+            if include_reversals:
+                reference_order[subkey] = reference_order[subkey] + [lst[::-1] for lst in reference_order[subkey]]
+            for sequence in reference_order[subkey]:
+                lev = _normalized_levenshtein(df[id].values, sequence)
+                if abs(lev) > bestLev:
+                    bestLev = lev
+            return bestLev
+        else:
+            #TODO: Also consider reversals here
+            return _normalized_levenshtein(df[id].values, reference_order)
+    dfts = df.loc[df['M_Selection_Role'] == 'target']
+    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_Lev')
+    print("Best lev ended")
+    return dfts
+
+def compute_Trial_STS(df, reference_order, id='C_Selection_ID', key='M_Condition_Name'):
+    def _compare_lists(df, reference_order, key):
+        if type(reference_order) == dict:
+            subkey = df[key].values[0]
+            if not subkey in reference_order.keys():
+                subkey = 'others'
+            max_sts_value = 0 
+            sequence_idx = 0 # Will be set to the idx of the best sequence
+            print(subkey)
+            # TODO: Return index also in other scores
+            for idx, sequence in enumerate(reference_order[subkey]):
+                print(sequence)
+                sts_value = sts(df[id].values, sequence)
+                if sts_value > max_sts_value:
+                    sequence_idx = idx                
+        else:
+            sts_value= sts(df[id].values, sequence)
+        return sts_value # TODO ALso sequence_idx, 
+
+    dfts = df.loc[df['M_Selection_Role'] == 'target']
+    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'TMP_Trial_STS')
+    #dfts['c'], dfts['d'] = zip(*dfts['TMP_Trial_STS'])
+    #df[['col1', 'col2']] = pd.DataFrame(df['data'].tolist(), index=df.index)
+    return dfts

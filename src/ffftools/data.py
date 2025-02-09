@@ -1,5 +1,6 @@
 import pandas as pd
 from os.path import exists, join
+from glob import glob
 
 def KristjanssonEtAl2014(store_path=None): 
 	if store_path is not None:
@@ -24,5 +25,43 @@ def KristjanssonEtAl2014(store_path=None):
 		df.to_csv(join(store_path, 'KristjanssonEtAl2014.fff.csv'))
 	return df
 
+def loadFromFolder(path, prepend='subject', extension='.csv', sort=True):
+	"""
+    Loads and concatenates CSV files from a specified folder.
 
+    This function reads a set of .csv files (e.g. created by experiment builders)
+	and returns a pandas.DataFame with all the data.
+	TODO: Make the function check for fff columns!
     
+    Args:
+        path (str): The root directory path containing the folders to search.
+        prepend (str, optional): A string to prepend to the filename pattern. 
+            Defaults to 'subject'.
+        extension (str, optional): The file extension to look for. Defaults to '.csv'.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the concatenated contents of all 
+        matching files.
+
+    Example:
+        >>> df = loadFromFolder('data', prepend='subject', extension='.csv')
+        >>> print(df.head())
+    """
+	files = glob(join(path, prepend + '*' + extension))
+	df = pd.concat(map(pd.read_csv, files))
+	if sort:
+		df.sort_values(by=['M_Participant_ID','M_Trial_Index', 'M_Selection_Index'], inplace=True)
+	return df
+	
+    
+def describe(dataframe):
+	print("Found %d participants in the dataset." % dataframe['M_Participant_ID'].nunique())
+	print("Found %d conditions across all participants." % dataframe['M_Condition_Name'].nunique())
+	print("Found %d selections across all participants." % dataframe['M_Selection_Index'].nunique())
+	print("---------- Details -----------")
+	for p in dataframe['M_Participant_ID'].unique():
+		pdf = dataframe.query("M_Participant_ID == @p")
+		print('------ Participant:' + str(p) + ': -------')
+		print('Conditions: ' + str(pdf['M_Condition_Name'].unique()))
+		print('Trials: ' + str(len(pdf['M_Trial_Index'].unique())))
+		print('Slections: ' + str(len(pdf)))

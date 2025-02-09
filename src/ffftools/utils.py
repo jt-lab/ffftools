@@ -20,10 +20,13 @@ def nicify(df):
     
     return df
 
-def extract_condition(df, condition_name):
-    df = df[df['M_Condition_Name'] == condition_name]
+def extract_condition(df, name):
+    df = df.query('M_Condition_Name == @name')
     return df
 
+def extract_trial(df, index):
+    df = df.query('M_Trial_Index == @index')
+    return df
 
 def describe(df):
     print('Found a totoal of %d trials'%len(df))
