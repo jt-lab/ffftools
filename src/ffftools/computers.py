@@ -2,6 +2,103 @@ import numpy as np
 from scipy.stats import kendalltau
 from tqdm.auto import tqdm
 from .algorithms.sequence import sts
+from functools import wraps
+import logging
+import time
+
+
+import logging
+import time
+
+# Try importing colorlog, and if it fails, fall back to standard logging
+try:
+    import colorlog
+    colorlog_available = True
+except ImportError:
+    colorlog_available = False
+
+# Set up a standard log formatter
+log_formatter = logging.Formatter("%(asctime)s [ %(levelname)s ] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+# Default to standard logging if colorlog is unavailable
+if colorlog_available:
+    # Set up a colored log formatter
+    log_formatter = colorlog.ColoredFormatter(
+        "%(asctime)s [%(log_color)s%(levelname)s%(reset)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        log_colors={
+            'DEBUG': 'magenta',
+            'INFO': 'blue',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'bold_red'
+        }
+    )
+
+# Set up the console handler
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_formatter)
+
+# Get the root logger and set the level to INFO
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(console_handler)
+
+def log_and_time(func):
+    """Logs and times the execution of a function."""
+    @wraps(func)
+    def wrapper(df, *args, **kwargs):
+        logging.info(f"Starting {func.__name__}...")
+        start_time = time.time()
+        result = func(df, *args, **kwargs)
+        elapsed_time = time.time() - start_time
+        logging.info(f"Finished {func.__name__} after {elapsed_time:.4f} seconds.")
+        return result
+    return wrapper
+
+def check_protection(colname):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(df, *args, **kwargs):
+            if '!' + colname in df.columns:
+                logging.info(f"Attempted to compute '{colname}', but a protected custom column was found. Skipping computation!")
+                return df  # Skip computation and return the original df
+
+            return func(df, *args, **kwargs)  # Call the function normally if not protected
+        return wrapper
+    return decorator
+
+# Global registry to track functions that compute specific columns
+COLUMN_FUNCTION_MAP = {}
+
+def register_computation(*output_columns):
+    """Registers a function that computes one or more columns passed as separate arguments."""
+    def decorator(func):
+        for col in output_columns:
+            COLUMN_FUNCTION_MAP[col] = func  # Register each column
+        @wraps(func)
+        def wrapper(df, *args, **kwargs):
+            return func(df, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def requires(*required_columns):
+    """Decorator to check and compute required columns if missing."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(df, *args, **kwargs):
+            for col in required_columns:
+                if col not in df.columns:
+                    logging.info(f"Column '{col}' is missing. Computing it first...")
+                    if col in COLUMN_FUNCTION_MAP:
+                        df = COLUMN_FUNCTION_MAP[col](df)  # Compute required column
+                    else:
+                        raise ValueError(f"No registered function to compute '{col}'")
+            return func(df, *args, **kwargs)
+        return wrapper
+    return decorator
+    
 
 def compute_trialwise(df, fun, colname):
     #with tqdm(total=len(df)) as pbar:
@@ -21,6 +118,9 @@ def compute_trialwise(df, fun, colname):
                 df.loc[(maskp & maskc & maskt), colname] = value
 #               pbar.update(1)
 
+@register_computation('C_Selection_Target_Count')
+@check_protection('C_Selection_Target_Count')
+@log_and_time
 def compute_Selection_Target_Count(df):
     #TODO Spped up!
     def _compute_count(df):
@@ -37,6 +137,9 @@ def compute_Selection_Target_Count(df):
     compute_trialwise(df, _compute_count , 'C_Selection_Target_Count')
     return df
 
+@register_computation('C_Selection_Nth_Last_Target')
+@requires('C_Selection_Target_Count', 'C_Trial_Target_Count')
+@log_and_time
 def compute_Selection_Nth_Last_Target(df):
     df['C_Selection_Nth_Last_Target'] = (df['C_Trial_Target_Count'] 
                                         - df['C_Selection_Target_Count'] + 1).astype(int)
@@ -75,6 +178,8 @@ def compute_Selection_IT_LT_Ratio(df):
     df.loc[df['M_Selection_Inter-target_Time'] == -1, 'C_Selection_Inter-target_Length'] = -1
     return(df)
 
+@register_computation('C_Trial_Target_Count')
+@log_and_time
 def compute_Trial_Target_Count(df):
     compute_trialwise(df, lambda d: (d['M_Selection_Role'] == 'target').sum(), 'C_Trial_Target_Count')
     return df
