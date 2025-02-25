@@ -1,104 +1,9 @@
 import numpy as np
+import pandas as pd
 from scipy.stats import kendalltau
-from tqdm.auto import tqdm
 from .algorithms.sequence import sts
-from functools import wraps
-import logging
-import time
-
-
-import logging
-import time
-
-# Try importing colorlog, and if it fails, fall back to standard logging
-try:
-    import colorlog
-    colorlog_available = True
-except ImportError:
-    colorlog_available = False
-
-# Set up a standard log formatter
-log_formatter = logging.Formatter("%(asctime)s [ %(levelname)s ] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-
-# Default to standard logging if colorlog is unavailable
-if colorlog_available:
-    # Set up a colored log formatter
-    log_formatter = colorlog.ColoredFormatter(
-        "%(asctime)s [%(log_color)s%(levelname)s%(reset)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        log_colors={
-            'DEBUG': 'magenta',
-            'INFO': 'blue',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'bold_red'
-        }
-    )
-
-# Set up the console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(log_formatter)
-
-# Get the root logger and set the level to INFO
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(console_handler)
-
-def log_and_time(func):
-    """Logs and times the execution of a function."""
-    @wraps(func)
-    def wrapper(df, *args, **kwargs):
-        logging.info(f"Starting {func.__name__}...")
-        start_time = time.time()
-        result = func(df, *args, **kwargs)
-        elapsed_time = time.time() - start_time
-        logging.info(f"Finished {func.__name__} after {elapsed_time:.4f} seconds.")
-        return result
-    return wrapper
-
-def check_protection(colname):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(df, *args, **kwargs):
-            if '!' + colname in df.columns:
-                logging.info(f"Attempted to compute '{colname}', but a protected custom column was found. Skipping computation!")
-                return df  # Skip computation and return the original df
-
-            return func(df, *args, **kwargs)  # Call the function normally if not protected
-        return wrapper
-    return decorator
-
-# Global registry to track functions that compute specific columns
-COLUMN_FUNCTION_MAP = {}
-
-def register_computation(*output_columns):
-    """Registers a function that computes one or more columns passed as separate arguments."""
-    def decorator(func):
-        for col in output_columns:
-            COLUMN_FUNCTION_MAP[col] = func  # Register each column
-        @wraps(func)
-        def wrapper(df, *args, **kwargs):
-            return func(df, *args, **kwargs)
-        return wrapper
-    return decorator
-
-
-def requires(*required_columns):
-    """Decorator to check and compute required columns if missing."""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(df, *args, **kwargs):
-            for col in required_columns:
-                if col not in df.columns:
-                    logging.info(f"Column '{col}' is missing. Computing it first...")
-                    if col in COLUMN_FUNCTION_MAP:
-                        df = COLUMN_FUNCTION_MAP[col](df)  # Compute required column
-                    else:
-                        raise ValueError(f"No registered function to compute '{col}'")
-            return func(df, *args, **kwargs)
-        return wrapper
-    return decorator
-    
+from .decorators import *
+from tqdm.auto import tqdm
 
 def compute_trialwise(df, fun, colname):
     #with tqdm(total=len(df)) as pbar:
@@ -119,6 +24,7 @@ def compute_trialwise(df, fun, colname):
 #               pbar.update(1)
 
 @register_computation('C_Selection_Target_Count')
+@requires('M_Trial_Index', 'M_Selection_Role')
 @check_protection('C_Selection_Target_Count')
 @log_and_time
 def compute_Selection_Target_Count(df):
@@ -139,72 +45,133 @@ def compute_Selection_Target_Count(df):
 
 @register_computation('C_Selection_Nth_Last_Target')
 @requires('C_Selection_Target_Count', 'C_Trial_Target_Count')
+@check_protection('C_Selection_Nth_Last_Target')
 @log_and_time
 def compute_Selection_Nth_Last_Target(df):
     df['C_Selection_Nth_Last_Target'] = (df['C_Trial_Target_Count'] 
                                         - df['C_Selection_Target_Count'] + 1).astype(int)
     return df
 
+@register_computation('C_Selection_Target_Switch')
+@requires('M_Selection_Type', 'M_Selection_Role', 'C_Selection_Target_Count')
+@check_protection('C_Selection_Nth_Last_Target')
+@log_and_time
 def compute_Selection_Target_Switch(df):
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     ts = (dfts['M_Selection_Type'].values[1:] != dfts['M_Selection_Type'].values[0:-1]).astype(int)
-    df['C_Selection_Target_Switch'] = -1
-    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Target_Switch'] = [-1] + list(ts)
-    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Target_Switch'] = -1
+    df['C_Selection_Target_Switch'] = pd.NA
+    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Target_Switch'] = [pd.NA] + list(ts)
+    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Target_Switch'] = pd.NA
     return df
 
+@register_computation('C_Selection_Inter-target_Length')
+@requires('M_Selection_Role', 'M_Selection_X', 'M_Selection_X', 'C_Trial_Target_Count')
+@check_protection('C_Selection_Nth_Last_Target')
+@log_and_time
 def compute_Selection_ITL(df):
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     dx = dfts['M_Selection_X'].values[1:] - dfts['M_Selection_X'].values[0:-1]
     dy = dfts['M_Selection_Y'].values[1:] - dfts['M_Selection_Y'].values[0:-1]
     df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Length'] = \
-                                                    [-1] + list(np.sqrt(dx*dx+dy*dy))
-    df.loc[df['M_Selection_Role'] != 'target', 'C_Selection_Inter-target_Length'] = -1
-    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Length'] = -1
+                                                    [pd.NA] + list(np.sqrt(dx*dx+dy*dy))
+    df.loc[df['M_Selection_Role'] != 'target', 'C_Selection_Inter-target_Length'] = pd.NA
+    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Length'] = pd.NA
     return(df)
 
+@register_computation('C_Selection_Inter-target_Time')
+@requires('M_Selection_Role', 'M_Selection_Time', 'C_Trial_Target_Count')
+@check_protection('C_Selection_Nth_Last_Target')
+@log_and_time
 def compute_Selection_ITT(df):
     dfts = df.loc[df['M_Selection_Role'] == 'target']
-    df['C_Selection_Inter-target_Time'] = -1.0
+    df['C_Selection_Inter-target_Time'] = pd.NA
     itts = dfts['M_Selection_Time'].values[1:] - dfts['M_Selection_Time'].values[0:-1]
-    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Time'] = np.array([-1] + list(itts), dtype=float)
-    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Time'] = -1.0
+    df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Time'] = np.array([pd.NA] + list(itts), dtype=float)
+    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Time'] = pd.NA
     return(df)
 
+@register_computation('C_Selection_Inter-target_LT_Ratio')
+@requires('C_Selection_Inter-target_Length', 'M_Selection_Inter-target_Time')
+@check_protection('C_Selection_Nth_Last_Target')
+@log_and_time
 def compute_Selection_IT_LT_Ratio(df):
-    #if 'C_Selection_Inter-target_Length' not in df:
-    #    compute_Selection_ITL(df) #TODO: resolve auto computation via decorator!
     df['C_Selection_Inter-target_LT_Ratio'] = df['C_Selection_Inter-target_Length'] / df['M_Selection_Inter-target_Time']
-    df.loc[df['M_Selection_Inter-target_Time'] == -1, 'C_Selection_Inter-target_Length'] = -1
+    df.loc[df['M_Selection_Inter-target_Time'] == pd.NA, 'C_Selection_Inter-target_LT_Ratio'] = pd.NA
     return(df)
 
 @register_computation('C_Trial_Target_Count')
+@requires('M_Selection_Role')
+@check_protection('C_Trial_Target_Count')
 @log_and_time
 def compute_Trial_Target_Count(df):
     compute_trialwise(df, lambda d: (d['M_Selection_Role'] == 'target').sum(), 'C_Trial_Target_Count')
     return df
 
+@register_computation('C_Trial_XR', 'C_Trial_YR', 'C_Trial_BestR', 'C_Trial_Collection_Direction')
+@requires('M_Selection_Role', 'M_Selection_X', 'M_Selection_Y','C_Selection_Target_Count')
+@check_protection('C_Trial_Target_Count')
+@log_and_time
 def compute_Trial_BestR(df):
+    """Computes the Best-R value for a given trial, as described by Woods et al. (2013).
+
+    The Best-R metric assesses the correlation between selection positions and target selection counts 
+    to determine the dominant movement direction. 
+
+    Assumes that the negative Y-axis points upwards.
+
+    Args:
+        fff-compatible df (pd.DataFrame): Required columns:
+            - 'M_Selection_Role': Role of the selection (e.g., 'target').
+            - 'M_Selection_X': X-coordinate of the selection.
+            - 'M_Selection_Y': Y-coordinate of the selection.
+
+    Returns:
+         fff-compatible df  (pd.DataFrame): Additional computed columns:
+            - 'C_Trial_XR': Correlation of selections along the X-axis.
+            - 'C_Trial_YR': Correlation of selections along the Y-axis.
+            - 'C_Trial_BestR': Maximum absolute correlation value (Best-R).
+            - 'C_Trial_Collection_Direction': Estimated movement direction ('left to right', 
+              'right to left', 'top to bottom', 'bottom to top').
+
+    Warning:
+        Best-R calculation assumes a negative Y-axis pointing upwards.
+
+    References:
+        Woods, A. J., Göksun, T., Chatterjee, A., Zelonis, S., Mehta, A., & Smith, S. E. (2013). 
+        The development of organized visual search. *Neuropsychologia, 51*(13), 2956–2967. 
+        https://doi.org/10.1016/j.neuropsychologia.2013.10.001
+    """
+    logger.warning("Attention: Best-r calculation assumes negative-y-axis pointing up!")
+
     def _compute_XR_YR(df, spatial_column):
+        """Computes the correlation between the given spatial column and target selection counts."""
         target_selection = df[df['M_Selection_Role'] == 'target']
         r = np.corrcoef(target_selection[spatial_column].values,
                         target_selection['C_Selection_Target_Count'].values)
-        return(r[0,1])
+        return r[0, 1]
 
-    compute_trialwise(df, lambda x : _compute_XR_YR(x, 'M_Selection_X'), 'C_Trial_XR')
-    compute_trialwise(df, lambda x : _compute_XR_YR(x, 'M_Selection_Y'), 'C_Trial_YR')
+    compute_trialwise(df, lambda x: _compute_XR_YR(x, 'M_Selection_X'), 'C_Trial_XR')
+    compute_trialwise(df, lambda x: _compute_XR_YR(x, 'M_Selection_Y'), 'C_Trial_YR')
+
     df['C_Trial_BestR'] = df[["C_Trial_XR", "C_Trial_YR"]].abs().max(axis=1)
-    df['C_Trial_Collection_Direction'] = 'None' # Will be overwritten virtually always!
-    df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] < 0),\
-        'C_Trial_Collection_Direction'] = 'left to right'
-    df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] > 0),\
-        'C_Trial_Collection_Direction'] = 'right to left'
-    df.loc[(df['C_Trial_XR'].abs() < df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] < 0),\
-        'C_Trial_Collection_Direction'] = 'top to bottom'
-    df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] > 0),\
-        'C_Trial_Collection_Direction'] = 'bottom to top'
-    return(df)
 
+    df['C_Trial_Collection_Direction'] = 'None'  # Will be overwritten virtually always!
+    df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] > 0),
+           'C_Trial_Collection_Direction'] = 'left to right'
+    df.loc[(df['C_Trial_XR'].abs() > df['C_Trial_YR'].abs()) & (df['C_Trial_XR'] < 0),
+           'C_Trial_Collection_Direction'] = 'right to left'
+    df.loc[(df['C_Trial_XR'].abs() < df['C_Trial_YR'].abs()) & (df['C_Trial_YR'] < 0),
+           'C_Trial_Collection_Direction'] = 'top to bottom'
+    df.loc[(df['C_Trial_XR'].abs() < df['C_Trial_YR'].abs()) & (df['C_Trial_YR'] > 0),
+           'C_Trial_Collection_Direction'] = 'bottom to top'
+
+    return df
+
+@register_computation('C_Trial_Tau', 'C_Trial_AbsTau')
+@requires('M_Selection_Role')
+@check_protection('C_Trial_Target_Count')
+@log_and_time
+@experimental
 def compute_Trial_Tau(df, reference_order, id='C_Selection_ID', key='M_Condition_Name'):
     def _compare_lists(df, reference_order, key):
         if type(reference_order) == dict:
@@ -223,16 +190,19 @@ def compute_Trial_Tau(df, reference_order, id='C_Selection_ID', key='M_Condition
     compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_Tau')
     dfts['C_Trial_AbsTau'] = dfts['C_Trial_Tau'].abs() 
     return dfts
-    
+
+@register_computation('C_Trial_BestLev')
+@requires('M_Selection_Role')
+@check_protection('C_Trial_Target_Count')
+@log_and_time
+@experimental
 def compute_Trial_BestLev(df, reference_order, id='C_Selection_ID', key='M_Condition_Name', include_reversals=True):
-    print("Best lev started!")
     from Levenshtein import distance as levenshtein_distance
     def _normalized_levenshtein(obs, gt):
         d = levenshtein_distance("".join(map(str, obs)), "".join(map(str, gt)))
         l = max(len(obs), len(gt))
         return 1 - d / l
     def _compare_lists(df, reference_order, key):
-        print("working on one trial!")
         if type(reference_order) == dict:
             subkey = df[key].values[0]
             if not subkey in reference_order.keys():
@@ -250,10 +220,14 @@ def compute_Trial_BestLev(df, reference_order, id='C_Selection_ID', key='M_Condi
             #TODO: Also consider reversals here
             return _normalized_levenshtein(df[id].values, reference_order)
     dfts = df.loc[df['M_Selection_Role'] == 'target']
-    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_Lev')
-    print("Best lev ended")
+    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_BestLev')
     return dfts
 
+@register_computation('C_Trial_BestLev')
+@requires('M_Selection_Role')
+@check_protection('C_Trial_Target_Count')
+@log_and_time
+@experimental
 def compute_Trial_STS(df, reference_order, id='C_Selection_ID', key='M_Condition_Name'):
     def _compare_lists(df, reference_order, key):
         if type(reference_order) == dict:
@@ -262,19 +236,15 @@ def compute_Trial_STS(df, reference_order, id='C_Selection_ID', key='M_Condition
                 subkey = 'others'
             max_sts_value = 0 
             sequence_idx = 0 # Will be set to the idx of the best sequence
-            print(subkey)
             # TODO: Return index also in other scores
             for idx, sequence in enumerate(reference_order[subkey]):
-                print(sequence)
                 sts_value = sts(df[id].values, sequence)
                 if sts_value > max_sts_value:
                     sequence_idx = idx                
         else:
             sts_value= sts(df[id].values, sequence)
-        return sts_value # TODO ALso sequence_idx, 
+        return sts_value # TODO Also sequence_idx, 
 
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'TMP_Trial_STS')
-    #dfts['c'], dfts['d'] = zip(*dfts['TMP_Trial_STS'])
-    #df[['col1', 'col2']] = pd.DataFrame(df['data'].tolist(), index=df.index)
     return dfts

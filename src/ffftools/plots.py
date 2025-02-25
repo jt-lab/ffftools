@@ -19,6 +19,7 @@ def plot_trial_trajectory(
         background=None,
         image_path='%s.png', 
         image_alpha=0.5,
+        image_extend=None,
         patch_size=None,
         ax=None
     ):
@@ -26,32 +27,33 @@ def plot_trial_trajectory(
     x, y = df['M_Selection_X'].values, df['M_Selection_Y'].values
     if ax == None:
         f, ax = plt.subplots(1)  
+    if image_extend is None:
+        image_extend = [
+                    -patch_size[0] / 2, patch_size[0] / 2,
+                    -patch_size[1] / 2, patch_size[1] / 2
+                ]
+        
+        
 
     if background:  
         if type(background == "str"):
             bg_img = mpimg.imread(image_path%df[background].values[0]) 
             # Convert grayscale to RGB only if needed
-            if bg_img.ndim == 2 or (bg_img.ndim == 3 and bg_img.shape[2] == 1):  
-                bg_img = np.stack([bg_img] * 3, axis=-1)  # Convert grayscale to RGB
+            #if bg_img.ndim == 2 or (bg_img.ndim == 3 and bg_img.shape[2] == 1):  
+            #    bg_img = np.stack([bg_img] * 3, axis=-1)  # Convert grayscale to RGB
             ax.imshow(
                 bg_img,
                 alpha=image_alpha,
-                extent=[
-                    0, patch_size[0],
-                    0, patch_size[1]
-                    ],
-                #origin='lower'
-                )
-                    #            extent=[
-                    #-patch_size[0] / 2, patch_size[0] / 2,
-                    #-patch_size[1] / 2, patch_size[1] / 2
-                    #],
+                extent=image_extend
+            )
+            
         else:
             ax.set_facecolor(background)  
 
     ax.plot(x, y, color=linecolor, linestyle=linestyle)
 
     for marker in df[marker_column].unique():
+        x, y = df[df[marker_column]==marker]['M_Selection_X'].values, df[df[marker_column]==marker]['M_Selection_Y'].values
         ax.plot(x, y, marker=marker_mapping[marker], color=color_mapping[marker],
             linestyle="", markersize=marker_size)
 
@@ -113,8 +115,5 @@ def create_trajectory_pdf(
         d = pdf.infodict()
         d['Title'] = 'Trial-wise collection trajectory plots'
         d['Author'] = 'ffftools'
-
-
-
 
 

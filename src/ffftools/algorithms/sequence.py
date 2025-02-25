@@ -49,38 +49,8 @@ def levenshtein_distance(observed_sequence, groundtruth_sequence):
     return dp[len1][len2]
 
 
-
-
-def sts_alt(observed_sequence, groundtruth_sequence):
-    """
-    Compute the Standard Sequence Tracing Score (STS) by comparing a participant's sequence to a groundtruth sequence.
-
-    The STS measures how well a participant follows the expected order of items in the groundtruth sequence. 
-    A score of 1 indicates perfect adherence (i.e., the participant follows the exact order), while a score of 0 
-    indicates complete randomness (i.e., no adherence to the expected order).
-
-    Args:
-        observed_sequence (list of int): The sequence of items the participant followed during the task.
-        groundtruth_sequence (list of int): The correct order of items, or the groundtruth sequence that the participant should follow.
-
-    Returns:
-        float: The STS score, normalized between 0 (complete randomness) and 1 (perfect adherence).
-
-    Notes:
-        This score is calculated by determining the number of transitions in the participant sequence 
-        that deviate from the expected adjacent items in the groundtruth sequence.
-    """
-    observed_indices = np.searchsorted(groundtruth_sequence, observed_sequence)
-    diffs = np.abs(np.diff(observed_indices))
-    systematic_count = np.sum(diffs == 1)
-    
-    return (systematic_count / len(diffs))
-
-
 def sts(observed_sequence, groundtruth_sequence):
     # To make sure arbitrary IDs can be used
-    print(observed_sequence)
-    print(groundtruth_sequence)
     id_mapping = {id_: idx for idx, id_ in enumerate(groundtruth_sequence)}
     obs_seq = np.array([id_mapping[id_] for id_ in observed_sequence])
 

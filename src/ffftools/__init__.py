@@ -1,4 +1,4 @@
-__version__ = "0.0.3"
+__version__ = "0.0.3-feb25"
 
 from .computers import *
 from .algorithms.shp_dp import *

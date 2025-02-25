@@ -35,3 +35,9 @@ def describe(df):
     ps = df['M_Participant_ID'].unique()
     print('Found %d participants: %s'%(len(ps), str(ps)))
     return df
+
+def has_valid_name(column_name):
+    return column_name.startswith(('M_', 'C_', '!C_', 'S_'))
+
+def is_mandatory(column_name):
+    return column_name.startswith('M_')
