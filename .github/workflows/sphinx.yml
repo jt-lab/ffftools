@@ -3,7 +3,7 @@ name: Deploy Sphinx Docs
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main  # Or your default branch
 
 jobs:
   build:
@@ -18,12 +18,13 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install sphinx sphinx-rtd-theme sphinx-autoapi
+        run: |
+          pip install sphinx sphinx-rtd-theme sphinx-autoapi
 
       - name: Build documentation
         run: |
           cd docs
-          make html
+          sphinx-build -b html source/ _build/html  # This will build the docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
