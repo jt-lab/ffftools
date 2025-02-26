@@ -131,10 +131,11 @@ class TestComputeTrialBestR(unittest.TestCase):
 
         
         # Save the plot to a file
-        plot_filename = f"BestRTest_{datetime.now().strftime('%Y%m%d_%H%M%S')}.test.png"
-        plt.tight_layout()
-        plt.savefig(plot_filename)
-        plt.close()  # Close the plot to prevent it from being displayed
+        if os.getenv("PLOT", "True") == "True":
+            plot_filename = f"BestRTest_{datetime.now().strftime('%Y%m%d_%H%M%S')}.test.png"
+            plt.tight_layout()
+            plt.savefig(plot_filename)
+            plt.close()  # Close the plot to prevent it from being displayed
 
 if __name__ == '__main__':
     unittest.main()

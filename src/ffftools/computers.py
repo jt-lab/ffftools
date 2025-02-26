@@ -6,7 +6,6 @@ from .decorators import *
 from tqdm.auto import tqdm
 
 def compute_trialwise(df, fun, colname):
-    #with tqdm(total=len(df)) as pbar:
     for p in df.M_Participant_ID.unique():
         maskp = df.M_Participant_ID == p
         for c in df[maskp].M_Condition_Name.unique():
@@ -16,40 +15,57 @@ def compute_trialwise(df, fun, colname):
                 value = fun(df[(maskp & maskc & maskt)])
                 if not np.isscalar(value) and (len(value) != len(df.loc[(maskp & maskc & maskt)])):
                     # TODO: Needs fixing!
-                    #df[colname] = df[colname].astype(object) # TODO: only when needed
+                    # df[colname] = df[colname].astype(object) # TODO: only when needed
                     # Manually broadcast tuples
                     value = [value] * len(df.loc[(maskp & maskc & maskt)])
-                #print(df.loc[(maskp & maskc & maskt)])
                 df.loc[(maskp & maskc & maskt), colname] = value
-#               pbar.update(1)
 
 @register_computation('C_Selection_Target_Count')
 @requires('M_Trial_Index', 'M_Selection_Role')
 @check_protection('C_Selection_Target_Count')
 @log_and_time
 def compute_Selection_Target_Count(df):
-    #TODO Spped up!
-    def _compute_count(df):
-        count = []
-        last_t_index = -1
-        for _, row in df.iterrows():
-            if row['M_Trial_Index'] != last_t_index:
-                tcount = 0
-            if row['M_Selection_Role'] == 'target':
-                tcount += 1
-            last_t_index  = row['M_Trial_Index']
-            count.append(tcount)
-        return count
-    compute_trialwise(df, _compute_count , 'C_Selection_Target_Count')
+    """Computes the cumulative target selection count within  each trial.
+
+    Args:
+        df (pd.DataFrame): fff-compatible DataFrame. 
+
+    Returns:
+        df (pd.DataFrame): Updated DataFrame with an additional column:
+            - 'C_Selection_Target_Count': Cumulative count of 'target' selections within each trial.
+    """
+    target_flag = (df['M_Selection_Role'] == 'target').astype(int)
+    df['C_Selection_Target_Count'] = target_flag.groupby(df['M_Trial_Index']).cumsum()
+
     return df
+
 
 @register_computation('C_Selection_Nth_Last_Target')
 @requires('C_Selection_Target_Count', 'C_Trial_Target_Count')
 @check_protection('C_Selection_Nth_Last_Target')
 @log_and_time
 def compute_Selection_Nth_Last_Target(df):
+    """Computes the Nth-last target selection index within each trial.
+
+    Args:
+        df (pd.DataFrame): fff-compatible DataFrame. 
+
+    Returns:
+        df (pd.DataFrame): Updated DataFrame with an additional column:
+            - 'C_Selection_Nth_Last_Target': Position of the target selection when counted 
+              from the last target selection (1-based index).
+
+    Example:
+        If a trial has 5 total target selections, they will be numbered as:
+            - First target → 5 (farthest from last)
+            - Second target → 4
+            - Third target → 3
+            - Fourth target → 2
+            - Fifth target → 1 (last target)
+
+    """
     df['C_Selection_Nth_Last_Target'] = (df['C_Trial_Target_Count'] 
-                                        - df['C_Selection_Target_Count'] + 1).astype(int)
+                                         - df['C_Selection_Target_Count'] + 1).astype(int)
     return df
 
 @register_computation('C_Selection_Target_Switch')
