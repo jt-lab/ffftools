@@ -28,8 +28,10 @@ author = 'Jan Tünnermann'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.autodoc',  # Include autodoc to pull in docstrings from your code
+    'sphinx.ext.napoleon',  # If you are using Google-style or NumPy-style docstrings
+    'sphinx_autoapi.extension',  # If you're using AutoAPI for automatic API documentation generation
 ]
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
