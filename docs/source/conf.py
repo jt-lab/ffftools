@@ -27,11 +27,21 @@ author = 'Jan Tünnermann'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+# Add the extension
 extensions = [
-    'sphinx.ext.autodoc',  # Include autodoc to pull in docstrings from your code
-    'sphinx.ext.napoleon',  # If you are using Google-style or NumPy-style docstrings
-    'sphinx_autoapi.extension',  # If you're using AutoAPI for automatic API documentation generation
+    'sphinx.ext.autodoc',  # Include autodoc to pull in docstrings
+    'sphinx.ext.napoleon',  # If you're using Google-style or NumPy-style docstrings
+    'sphinx_autoapi.extension',  # AutoAPI extension for automatic API documentation generation
 ]
+
+# AutoAPI configuration
+autoapi_dirs = ['../ffftools']  # Adjust this path to your project structure
+autoapi_options = [
+    'members',  # Include class and function members
+    'undoc-members',  # Include undocumented members
+    'show-inheritance',  # Show class inheritance in documentation
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
