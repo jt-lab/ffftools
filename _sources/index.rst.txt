@@ -10,6 +10,7 @@ Welcome to ffftools's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   module
 
 
 Indices and tables
