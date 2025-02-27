@@ -27,10 +27,7 @@ author = 'Jan Tünnermann'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-# Add the extension
 extensions = [
-    'sphinx.ext.autodoc',  # To pull in docstrings from your code
-    'sphinx.ext.napoleon',  # For Google-style or NumPy-style docstrings
 ]
 
 # Add any paths that contain templates here, relative to this directory.
