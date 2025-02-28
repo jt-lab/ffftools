@@ -12,6 +12,9 @@ class TestComputeSelectionNthLastTarget(unittest.TestCase):
         
         # Create a test DataFrame
         df = pd.DataFrame({
+            'M_Participant_ID': [0] * 7,
+            'M_Condition_Name': ["test"] * 7,
+            'M_Trial_Index': [0] * 7,
             'C_Selection_Target_Count': [1, 2, 3, 1, 2, 3, 4],
             'C_Trial_Target_Count': [3, 3, 3, 4, 4, 4, 4]  # Trial 1 has 3 targets, Trial 2 has 4
         })

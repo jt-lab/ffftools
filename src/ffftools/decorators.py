@@ -42,7 +42,7 @@ def log_and_time(func):
     """Logs and times the execution of a function."""
     @wraps(func)
     def wrapper(df, *args, **kwargs):
-        logging.info(f"Starting {func.__name__}...")
+        logging.info(f"Starting {func.__name__} ...")
         start_time = time.time()
         result = func(df, *args, **kwargs)
         elapsed_time = time.time() - start_time
@@ -84,7 +84,7 @@ def requires(*required_columns):
         def wrapper(df, *args, **kwargs):
             for col in required_columns:
                 if col not in df.columns:
-                    logging.info(f"Column '{col}' is missing. Computing it first...")
+                    logging.info(f"Column '{col}' is missing. Computing it first ...")
                     if col in COLUMN_FUNCTION_MAP:
                         df = COLUMN_FUNCTION_MAP[col](df)  # Compute required column
                     else:

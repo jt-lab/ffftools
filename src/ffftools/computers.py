@@ -34,8 +34,12 @@ def compute_Selection_Target_Count(df):
         df (pd.DataFrame): Updated DataFrame with an additional column:
             - 'C_Selection_Target_Count': Cumulative count of 'target' selections within each trial.
     """
-    target_flag = (df['M_Selection_Role'] == 'target').astype(int)
-    df['C_Selection_Target_Count'] = target_flag.groupby(df['M_Trial_Index']).cumsum()
+    df['C_Selection_Target_Count'] = (
+        df[df['M_Selection_Role'] == 'target']
+        .groupby(['M_Participant_ID', 'M_Condition_Name', 'M_Trial_Index'])
+        .cumcount() + 1  # Start counting from 1
+    )
+    df['C_Selection_Target_Count'] = df.groupby(['M_Participant_ID', 'M_Condition_Name', 'M_Trial_Index'])['C_Selection_Target_Count'].transform(lambda x: x.ffill())
 
     return df
 
@@ -73,26 +77,56 @@ def compute_Selection_Nth_Last_Target(df):
 @check_protection('C_Selection_Nth_Last_Target')
 @log_and_time
 def compute_Selection_Target_Switch(df):
+    """Computes target type switches.
+    
+    Args:
+        df (pd.DataFrame): fff-compatible DataFrame. 
+
+    Returns:
+        pd.DataFrame: The input DataFrame with an additional column:
+            - 'C_Selection_Target_Switch': 
+                - 1 if a switch occurred from the previous selection.
+                - 0 if no switch occurred.
+                - pd.NA for the first selection in a trial or distractors.
+    """
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     ts = (dfts['M_Selection_Type'].values[1:] != dfts['M_Selection_Type'].values[0:-1]).astype(int)
+
     df['C_Selection_Target_Switch'] = pd.NA
     df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Target_Switch'] = [pd.NA] + list(ts)
     df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Target_Switch'] = pd.NA
+
     return df
 
+
 @register_computation('C_Selection_Inter-target_Length')
-@requires('M_Selection_Role', 'M_Selection_X', 'M_Selection_X', 'C_Trial_Target_Count')
+@requires('M_Selection_Role', 'M_Selection_X', 'M_Selection_Y', 'C_Trial_Target_Count')
 @check_protection('C_Selection_Nth_Last_Target')
 @log_and_time
 def compute_Selection_ITL(df):
+    """Computes the inter-target selection length (ITL) for target selections.
+
+    Args:
+        df (pd.DataFrame): fff-compatible DataFrame. 
+
+    Returns:
+        pd.DataFrame: The modified DataFrame with a new column:
+            - 'C_Selection_Inter-target_Length': The Euclidean distance between 
+              consecutive target selections. NA for first selections and non-target rows.
+
+    """
     dfts = df.loc[df['M_Selection_Role'] == 'target']
     dx = dfts['M_Selection_X'].values[1:] - dfts['M_Selection_X'].values[0:-1]
     dy = dfts['M_Selection_Y'].values[1:] - dfts['M_Selection_Y'].values[0:-1]
+    
     df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Length'] = \
-                                                    [pd.NA] + list(np.sqrt(dx*dx+dy*dy))
+        [pd.NA] + list(np.sqrt(dx * dx + dy * dy))
+
     df.loc[df['M_Selection_Role'] != 'target', 'C_Selection_Inter-target_Length'] = pd.NA
     df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Length'] = pd.NA
-    return(df)
+
+    return df
+
 
 @register_computation('C_Selection_Inter-target_Time')
 @requires('M_Selection_Role', 'M_Selection_Time', 'C_Trial_Target_Count')
@@ -116,7 +150,7 @@ def compute_Selection_IT_LT_Ratio(df):
     return(df)
 
 @register_computation('C_Trial_Target_Count')
-@requires('M_Selection_Role')
+@requires('M_Selection_Role', 'M_Participant_ID', 'M_Condition_Name', 'M_Trial_Index')
 @check_protection('C_Trial_Target_Count')
 @log_and_time
 def compute_Trial_Target_Count(df):
@@ -262,5 +296,5 @@ def compute_Trial_STS(df, reference_order, id='C_Selection_ID', key='M_Condition
         return sts_value # TODO Also sequence_idx, 
 
     dfts = df.loc[df['M_Selection_Role'] == 'target']
-    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'TMP_Trial_STS')
+    compute_trialwise(dfts, lambda x : _compare_lists(x, reference_order, key), 'C_Trial_STS')
     return dfts

@@ -32,15 +32,10 @@ def plot_trial_trajectory(
                     -patch_size[0] / 2, patch_size[0] / 2,
                     -patch_size[1] / 2, patch_size[1] / 2
                 ]
-        
-        
 
     if background:  
         if type(background == "str"):
             bg_img = mpimg.imread(image_path%df[background].values[0]) 
-            # Convert grayscale to RGB only if needed
-            #if bg_img.ndim == 2 or (bg_img.ndim == 3 and bg_img.shape[2] == 1):  
-            #    bg_img = np.stack([bg_img] * 3, axis=-1)  # Convert grayscale to RGB
             ax.imshow(
                 bg_img,
                 alpha=image_alpha,
@@ -116,4 +111,59 @@ def create_trajectory_pdf(
         d['Title'] = 'Trial-wise collection trajectory plots'
         d['Author'] = 'ffftools'
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+def plot_bars(df, column_name, agg_func='mean', ax=None):
+    """
+    Plots a bar chart for the specified column, averaging over M_Participant_ID, with one bar per M_Condition_Name.
+    The function supports different aggregation methods (mean, median, min, max) and includes error bars.
+
+    Args:
+        df (pd.DataFrame): DataFrame with the data to plot.
+        column_name (str): The column to aggregate and plot.
+        agg_func (str, optional): Aggregation function ('mean', 'median', 'min', 'max'). Default is 'mean'.
+        ax (matplotlib.axes.Axes, optional): If provided, the plot will be drawn on the given axes. Default is None.
+
+    Returns:
+        matplotlib.axes.Axes: The axes with the plot.
+    """
+    
+    # Ensure the aggregation function is valid
+    valid_agg_funcs = ['mean', 'median', 'min', 'max']
+    if agg_func not in valid_agg_funcs:
+        raise ValueError(f"Invalid aggregation function: {agg_func}. Choose from {valid_agg_funcs}.")
+    
+    # Aggregate data
+    if agg_func == 'mean':
+        aggregated = df.groupby('M_Condition_Name')[column_name].agg(['mean', 'sem'])
+    elif agg_func == 'median':
+        aggregated = df.groupby('M_Condition_Name')[column_name].agg(['median', 'sem'])
+    elif agg_func == 'min':
+        aggregated = df.groupby('M_Condition_Name')[column_name].agg(['min', 'sem'])
+    elif agg_func == 'max':
+        aggregated = df.groupby('M_Condition_Name')[column_name].agg(['max', 'sem'])
+    
+    # Create a new figure and axis if no axis is passed
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Plot bars with error bars (SEM)
+    conditions = aggregated.index
+    values = aggregated[agg_func]
+    errors = aggregated['sem']
+    
+    ax.bar(conditions, values, yerr=errors, capsize=5, color='skyblue', edgecolor='black', alpha=0.7)
+
+    # Set labels and title
+    ax.set_xlabel('Condition')
+    ax.set_ylabel(f'{agg_func.capitalize()} of {column_name}')
+    ax.set_title(f'{agg_func.capitalize()} of {column_name} by Condition')
+    
+    # Optionally, add the value of each bar on top
+    for i, v in enumerate(values):
+        ax.text(i, v + errors[i] + 0.1, f'{v:.2f}', ha='center', va='bottom')
+
+    return ax
