@@ -2,14 +2,19 @@ Column name,Label name,Short name,Data type,Range,Description
 C_Participant_Index,Participant Index,PIDX,Integer,0 … N,A zero-based index of the participants
 C_Condition_Index,Condition Index,CIDX,Integer,0 … N,A zero-based index of the conditions
 C_Selection_Target_Count,Target Count,#Ts,Integer,0 … N,The number of targets collected until (and including) this selection
-C_Selection_Nth_Last_Target,Nth Last Target, 1 … N, The Nth selected target counting backwards from the last click in the patch
-C_Selection_Inter-target_Length,Inter-target Length,ITL,Float,0 … R,The distance between the previous and this target. -1 if there was no previous target or if this selection was not a target
-C_Selection_Inter-target_Time,Inter-target Time,ITT,Float,0 … R,The time between the previous and this target. -1 if there was no previous target or if this selection was not a target
+C_Selection_Nth_Last_Target,Nth Last Target, NthLast, Integer, 1 … N, The Nth selected target counting backwards from the last click in the patch
+C_Trial_Path_Length,Path length,PL,Integer, 0 … +R, The total length of the item to item path that was created when foraging in the patch.
+C_Selection_Inter-target_Length,Inter-target Length,ITL,Float,0 … +R,The distance between the previous and this target. NaN if there was no previous target or if this selection was not a target
+C_Selection_Inter-target_Time,Inter-target Time,ITT,Float,0 … R,The time between the previous and this target. NaN if there was no previous target or if this selection was not a target
 C_Selection_Value,Value,Val.,Float,-R … +R,The value of the selection. Defaults to 1
 C_Selection_Rate_of_Return,Rate of Return,RoR,Float,-R … +R,The spontaneous rate of return for this selection (value collected / time since last addition)
 C_Selection_Picking_Rate,Picking Rate,PR,Float,0 … +R,The spontaneous picking rate for this selection ( 1 / time since last element)
-C_Selection_Target_Switch,Target Switch,Integer,0 … 1 [or -1],Whether or not (1 or 0) a switch occured since the last target selection. -1 if there was no previous target or if this selection was not a target
+C_Selection_Target_Switch,Target Switch, Switch, Integer,0 … 1 [or NaN],Whether or not (1 or 0) a switch occured since the last target selection. NaN if there was no previous target or if this selection was not a target
 C_Trial_Rate_of_Return,Trial Rate of Return,Trial ROR,Float,-R … +R,Value collected in this trial divided by the time spent in this trial
-C_Space_Unit,Space Unit,SU,String,"degrees visual angle, pixels",Unit that is used in space related columns defaults to degrees visual angle
-C_Time_Unit,Time Unit,TU,String,"ms, s, …",Unit that is used in time related columns defaults to ms
-C_Trial_Target_Count,Target Count in Trial,Integer,0 … 1, Number of targets selected in the trial
+C_Trial_Target_Count,Target Count in Trial, Target Count, Integer,0 … 1, Number of targets selected in the trial
+C_Trial_Optimal_Path_Length, Optimal Path Length, OPL,Float,0 … +R,"The length of the shortest path when taking the optimal trajectory through the patch."
+C_Trial_BestLev, Best-Levensthein-Distance, BestLev, Float,0 … +R, The minimum Levenstein distance measure (evaluated for a set of grount truth sequences)
+C_Trial_BestR, Best-r, Best-r, Float, 0 … 1, Measure of foraging organization. 
+C_Trial_BestTau, Best-τ, Best-τ, Float, 0 … 1, Measure of foraging organization. Best Kendall's tau for the selection sequence correlated with user-provided groundtruth orders.
+C_Trial_PAO, Percentage Above Optimal, PAO, Float, 0 … +R, Measure of foraging organization. Percentage points above the optimal path length.
+C_Trial_STS, Sequence Tracing Score, STS,Float,0 … 1,Measure of foraging organization. Proportion of movements along a groundtruth pattern (in any direction) among all movements.

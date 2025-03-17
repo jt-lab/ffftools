@@ -3,12 +3,15 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.distance import euclidean
 
+# TODO: both shp_dp and shp_sa night clean-up.
+# E.g. creation of the distance matrix could be shared by both
+
 def calculate_total_distance(df, path):
     """
     Calculate the total distance of the path based on the coordinates in the DataFrame.
 
     Parameters:
-    - df: pd.DataFrame containing the coordinates with columns 'M_Selection_X' and 'M_Selection_Y'.
+    - df: fff-compatible pd.DataFrame containing the coordinates with columns 'M_Selection_X' and 'M_Selection_Y'.
     - path: list of integers representing the indices of the nodes in the order they are visited.
 
     Returns:

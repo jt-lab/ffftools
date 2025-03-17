@@ -4,6 +4,9 @@ import random
 from scipy.spatial.distance import euclidean
 from tqdm import tqdm
 
+# TODO: both shp_dp and shp_sa night clean-up.
+# E.g. creation of the distance matrix could be shared by both
+
 # Create a distance matrix from the DataFrame
 def create_distance_matrix(df):
     n = len(df)
@@ -45,7 +48,6 @@ def simulated_annealing_shp(df, start_node=None, initial_temp=1000000, cooling_r
     # Simulated annealing parameters
     temperature = initial_temp
 
-    # Choose tqdm progress bar or not
     iterations = range(max_iterations)
     if use_tqdm:
         iterations = tqdm(iterations, desc="Simulated Annealing Progress")

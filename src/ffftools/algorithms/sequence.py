@@ -50,7 +50,7 @@ def levenshtein_distance(observed_sequence, groundtruth_sequence):
 
 
 def sts(observed_sequence, groundtruth_sequence):
-    # To make sure arbitrary IDs can be used
+    # To make sure arbitrary IDs can be used:
     id_mapping = {id_: idx for idx, id_ in enumerate(groundtruth_sequence)}
     obs_seq = np.array([id_mapping[id_] for id_ in observed_sequence])
 
