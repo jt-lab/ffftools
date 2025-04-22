@@ -4,9 +4,9 @@ from os.path import exists, join
 from glob import glob
 from .utils import make_label 
 
-def KristjanssonEtAl2014(store_path=None): 
+def KristjanssonJohannessonThornton2014(store_path=None): 
 	if store_path is not None:
-		local_file=join(store_path, 'KristjanssonEtAl2014.fff.csv')
+		local_file=join(store_path, 'KristjanssonJohannessonThornton2014.fff.csv')
 		if  exists(local_file):
 			return(pd.read_csv(local_file))
 	df =  pd.read_csv("https://ndownloader.figstatic.com/files/1564229", header=None )
@@ -58,6 +58,9 @@ def loadFromFolder(path, prepend='subject', extension='.csv', exclude_errors=Tru
 		df = df.query("M_Selection_Role == 'target'")
 
 	return df
+
+def load(filename):
+	return pd.read_csv(filename)
 	
     
 def describe(dataframe):

@@ -101,10 +101,10 @@ def compute_Selection_ITL(df):
     dy = dfts['M_Selection_Y'].values[1:] - dfts['M_Selection_Y'].values[0:-1]
     
     df.loc[df['M_Selection_Role'] == 'target', 'C_Selection_Inter-target_Length'] = \
-        [pd.NA] + list(np.sqrt(dx * dx + dy * dy))
+        [np.nan] + list(np.sqrt(dx * dx + dy * dy))
 
-    df.loc[df['M_Selection_Role'] != 'target', 'C_Selection_Inter-target_Length'] = pd.NA
-    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Length'] = pd.NA
+    df.loc[df['M_Selection_Role'] != 'target', 'C_Selection_Inter-target_Length'] = np.nan
+    df.loc[df['C_Selection_Target_Count'] == 1, 'C_Selection_Inter-target_Length'] = np.nan
 
     return df
 

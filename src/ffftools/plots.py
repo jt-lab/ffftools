@@ -200,6 +200,11 @@ def plot_correlation(df, score_column1, score_column2, category_column='M_Condit
         matplotlib.axes.Axes: The axes wifrom ..decorators import *th the plot.
     """
     
+    df = COLUMN_FUNCTION_MAP[score_column1](df)
+    df = COLUMN_FUNCTION_MAP[score_column2](df)
+
+  
+
     valid_agg_funcs = ['mean', 'median', 'min', 'max']
     if agg_func not in valid_agg_funcs:
         raise ValueError(f"Invalid aggregation function: {agg_func}. Choose from {valid_agg_funcs}.")
@@ -208,6 +213,8 @@ def plot_correlation(df, score_column1, score_column2, category_column='M_Condit
         df[score_column1] = df[score_column1].apply(transform1)
     if transform2:
         df[score_column2] = df[score_column2].apply(transform2)
+
+    display(df)
 
     # Aggregate data by participant
     # TODO: This bis is used for the bar plots as well ... extract
@@ -227,6 +234,7 @@ def plot_correlation(df, score_column1, score_column2, category_column='M_Condit
 
     if df[category_column].nunique() == 1:
         ax = [ax]
+
 
     for i, category in enumerate(df[category_column].unique()):
         current_ax = ax[i]
@@ -359,7 +367,7 @@ def plot_ITT_development(df, x_axis='C_Selection_Target_Count', ax=None, show=Fa
 
     # Labels and title
     ax.set_xlabel(make_label(x_axis, keep_level=True))
-    ax.set_ylabel(make_label('C_Selection_Inter-target_Time (s)'))
+    ax.set_ylabel(make_label('C_Selection_Inter-target_Time (ms)'))
     ax.set_title(f'Inter-target Time over {make_label(x_axis, keep_level=True)}')
 
     ax.legend(title="Condition")
