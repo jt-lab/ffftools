@@ -3,5 +3,5 @@ R_Experiment_DVA_Factor,DVA Factor,DVA,Float,0 … +R,"Determines the conversion
 R_Trial_Patch_File,Patch,PatchFile,Arbitrary,Arbitrary,Typically a relative link to a file containing a representation of the patch
 R_Selection_Relative_Pick_X,Relative Pick Position X,RelPickPosX,Float,-R … +R,X-location of the selection relative to the picked item
 R_Selection_Relative_Pick_Y,Relative Pick Position Y,RelPickPosY,Float,-R … +R,Y-location of the selection relative to the picked item
-R_Selection_Relative_Fixation_X,Relative Fixation Position X,RelFixPosX,Float,-R … +R,"X-location of the fixation relative to the picked item, when eye-tracking is used" 
+R_Selection_Relative_Fixation_X,Relative Fixation Position X,RelFixPosX,Float,-R … +R,"X-location of the fixation relative to the picked item, when eye-tracking is used"
 R_Selection_Relative_Fixation_Y,Relative Fixation Position Y,RelFixPosY,Float,-R … +R,"Y-location of the fixation relative to the picked item, when eye-tracking is used"
