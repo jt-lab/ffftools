@@ -59,8 +59,19 @@ def loadFromFolder(path, prepend='subject', extension='.csv', exclude_errors=Tru
 
 	return df
 
-def load(filename):
-	return pd.read_csv(filename)
+def load(filename, **kwargs):
+    """
+    Loads a ffformated CSV file into a pandas DataFrame.
+
+    Args:
+        filename (str): The CSV file path.
+        **kwargs: Arguments passed to pandas.read_csv().
+
+    Returns:
+        pandas.DataFrame: The ffformated dataframe.
+    """
+    return pd.read_csv(filename, **kwargs)
+
 	
     
 def describe(dataframe):
